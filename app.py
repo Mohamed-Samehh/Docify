@@ -153,39 +153,54 @@ def main():
             # Chat input at the top
             question = st.chat_input("Ask a question about the document")
             
+            # Display chat history first (newest conversation first, but user message above bot response)
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.write(message["content"])
+            
+            # Show thinking indicator if processing
+            if st.session_state.get('processing_question', False):
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        # Process the pending question while showing the spinner
+                        if len(st.session_state.messages) > 0 and st.session_state.messages[0]["role"] == "user":
+                            user_question = st.session_state.messages[0]["content"]
+                            
+                            try:
+                                # Search for relevant documents
+                                relevant_docs = st.session_state.doc_processor.search_documents(
+                                    st.session_state.vectorstore, user_question, k=3
+                                )
+                                
+                                # Generate response
+                                full_response = ""
+                                for chunk in st.session_state.chatbot.answer_question(user_question, relevant_docs):
+                                    full_response += chunk
+                                
+                                # Add assistant response right after user message (at position 1)
+                                st.session_state.messages.insert(1, {"role": "assistant", "content": full_response})
+                                
+                            except Exception as e:
+                                st.session_state.messages.insert(1, {"role": "assistant", "content": f"Error generating response: {str(e)}"})
+                            
+                            finally:
+                                st.session_state.processing_question = False
+                                st.rerun()
+            
             if question:
                 # Check if we still have a valid document
                 if 'vectorstore' not in st.session_state or 'chunks' not in st.session_state:
                     st.error("Please upload a document first.")
                     return
+                
+                # Prevent multiple concurrent requests
+                if st.session_state.get('processing_question', False):
+                    return
                     
-                # Generate response with loading indicator
-                try:
-                    # Add user message first
-                    st.session_state.messages.insert(0, {"role": "user", "content": question})
-                    
-                    # Search for relevant documents
-                    relevant_docs = st.session_state.doc_processor.search_documents(
-                        st.session_state.vectorstore, question, k=3
-                    )
-                    
-                    # Generate response with spinner
-                    with st.spinner("Thinking..."):
-                        full_response = ""
-                        for chunk in st.session_state.chatbot.answer_question(question, relevant_docs):
-                            full_response += chunk
-                    
-                    # Add assistant response right after user message (at position 1)
-                    st.session_state.messages.insert(1, {"role": "assistant", "content": full_response})
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"Error generating response: {str(e)}")
-            
-            # Display chat history (newest conversation first, but user message above bot response)
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.write(message["content"])
+                # Add user message first and set processing state
+                st.session_state.messages.insert(0, {"role": "user", "content": question})
+                st.session_state.processing_question = True
+                st.rerun()  # Refresh to show user message and thinking indicator
 
 if __name__ == "__main__":
     main()
