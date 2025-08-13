@@ -153,18 +153,18 @@ def main():
             # Chat input at the top
             question = st.chat_input("Ask a question about the document")
             
-            # Display chat history first (newest conversation first, but user message above bot response)
-            for message in st.session_state.messages:
+            # Display chat history with thinking indicator in the right position
+            for i, message in enumerate(st.session_state.messages):
                 with st.chat_message(message["role"]):
                     st.write(message["content"])
-            
-            # Show thinking indicator if processing
-            if st.session_state.get('processing_question', False):
-                with st.chat_message("assistant"):
-                    with st.spinner("Thinking..."):
-                        # Process the pending question while showing the spinner
-                        if len(st.session_state.messages) > 0 and st.session_state.messages[0]["role"] == "user":
-                            user_question = st.session_state.messages[0]["content"]
+                
+                # Show thinking indicator right after the first (newest) user message if processing
+                if (i == 0 and message["role"] == "user" and 
+                    st.session_state.get('processing_question', False)):
+                    with st.chat_message("assistant"):
+                        with st.spinner("Thinking..."):
+                            # Process the pending question while showing the spinner
+                            user_question = message["content"]
                             
                             try:
                                 # Search for relevant documents
