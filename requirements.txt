@@ -1,9 +1,11 @@
 streamlit
 langchain
+langchain_community
+langchain-huggingface
 groq
 sentence-transformers
 faiss-cpu
-pypdf2
+pypdf
 tiktoken
 torch
 python-dotenv
