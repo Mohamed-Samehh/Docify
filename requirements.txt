@@ -6,3 +6,4 @@ faiss-cpu
 pypdf2
 tiktoken
 torch
+python-dotenv

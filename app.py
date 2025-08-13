@@ -2,6 +2,10 @@ import streamlit as st
 from document_processor import DocumentProcessor
 from chatbot_service import ChatbotService
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Page config
 st.set_page_config(page_title="Document Chatbot", page_icon="📄", layout="wide")
@@ -27,15 +31,11 @@ def main():
     st.title("📄 Document Chatbot")
     st.write("Upload a document to get summaries and ask questions using Groq + Kimi!")
     
-    # Sidebar for API key
-    with st.sidebar:
-        st.header("Configuration")
-        api_key = st.text_input("Groq API Key", type="password")
-        if api_key:
-            os.environ["GROQ_API_KEY"] = api_key
+    # Get API key from environment
+    api_key = os.getenv("GROQ_API_KEY")
     
     if not api_key:
-        st.warning("Please enter your Groq API key in the sidebar to continue.")
+        st.warning("Please set GROQ_API_KEY in your .env file to continue.")
         return
     
     # Initialize services
