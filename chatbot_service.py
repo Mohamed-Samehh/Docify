@@ -36,7 +36,7 @@ Summary:"""
         """Answer question based on context documents with streaming"""
         context = "\n".join([doc.page_content for doc in context_docs])
         
-        prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, provide a brief general explanation or definition if possible.
+        prompt = f"""Based on the following context, please answer the question.
 
 Context:
 {context}
