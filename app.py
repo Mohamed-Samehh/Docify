@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Page config
-st.set_page_config(page_title="Document Chatbot", page_icon="📄", layout="wide")
+st.set_page_config(page_title="Docify", page_icon="📄", layout="wide")
 
 @st.cache_resource
 def get_document_processor():
@@ -43,8 +43,8 @@ def create_vectorstore(_processor, _chunks):
     return _processor.create_vectorstore(_chunks)
 
 def main():
-    st.title("📄 Document Chatbot")
-    st.write("Upload a document to get summaries and ask questions using Groq + Kimi!")
+    st.title("📄 Docify (Document Chatbot)")
+    st.write("Upload a document to get summaries and ask questions!")
     
     # Get API key from environment
     api_key = os.getenv("GROQ_API_KEY")
@@ -83,8 +83,6 @@ def main():
                 chunks = process_document(doc_processor, file_content, file_name)
                 vectorstore = create_vectorstore(doc_processor, chunks)
             
-            st.success(f"✅ Processed {len(chunks)} chunks from {uploaded_file.name}")
-            
             # Store in session state
             st.session_state.chunks = chunks
             st.session_state.vectorstore = vectorstore
@@ -98,9 +96,6 @@ def main():
     
     # Only show functionality if document is processed
     if 'chunks' in st.session_state:
-        # Display current file info
-        st.info(f"📄 Currently working with: **{st.session_state.current_file}**")
-        
         col1, col2 = st.columns([1, 1])
         
         with col1:
@@ -122,44 +117,33 @@ def main():
             if "messages" not in st.session_state:
                 st.session_state.messages = []
             
-            # Display chat history
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.write(message["content"])
-            
-            # Chat input
+            # Chat input at the top
             if question := st.chat_input("Ask a question about the document"):
-                # Add user message
-                st.session_state.messages.append({"role": "user", "content": question})
-                with st.chat_message("user"):
-                    st.write(question)
-                
-                # Generate response
-                with st.chat_message("assistant"):
-                    try:
-                        # Search for relevant documents
-                        relevant_docs = st.session_state.doc_processor.search_documents(
-                            st.session_state.vectorstore, question, k=3
-                        )
-                        
-                        # Stream response
-                        response_placeholder = st.empty()
-                        full_response = ""
-                        
-                        for chunk in st.session_state.chatbot.answer_question(question, relevant_docs):
-                            full_response += chunk
-                            response_placeholder.write(full_response + "▌")
-                        
-                        response_placeholder.write(full_response)
-                        
-                        # Add assistant message
-                        st.session_state.messages.append({
-                            "role": "assistant", 
-                            "content": full_response
-                        })
-                        
-                    except Exception as e:
-                        st.error(f"Error generating response: {str(e)}")
+                # Generate response first
+                try:
+                    # Search for relevant documents
+                    relevant_docs = st.session_state.doc_processor.search_documents(
+                        st.session_state.vectorstore, question, k=3
+                    )
+                    
+                    # Get full response before adding to messages
+                    full_response = ""
+                    for chunk in st.session_state.chatbot.answer_question(question, relevant_docs):
+                        full_response += chunk
+                    
+                    # Add both messages to the beginning of the list
+                    st.session_state.messages.insert(0, {"role": "assistant", "content": full_response})
+                    st.session_state.messages.insert(0, {"role": "user", "content": question})
+                    
+                except Exception as e:
+                    st.error(f"Error generating response: {str(e)}")
+            
+            # Display chat history (newest first)
+            chat_container = st.container()
+            with chat_container:
+                for message in st.session_state.messages:
+                    with st.chat_message(message["role"]):
+                        st.write(message["content"])
 
 if __name__ == "__main__":
     main()
