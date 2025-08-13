@@ -96,29 +96,44 @@ def main():
     
     # Only show functionality if document is processed
     if 'chunks' in st.session_state:
+        # Initialize states
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        if "summary_generated" not in st.session_state:
+            st.session_state.summary_generated = False
+        if "summary_content" not in st.session_state:
+            st.session_state.summary_content = ""
+            
         col1, col2 = st.columns([1, 1])
         
         with col1:
             st.header("📋 Summary")
-            if st.button("Generate Summary", type="primary"):
+            if st.button("Generate Summary", type="primary", disabled=st.session_state.get('generating_summary', False)):
+                st.session_state.generating_summary = True
                 with st.spinner("Generating summary..."):
                     try:
                         summary = st.session_state.chatbot.summarize_document(
                             st.session_state.chunks
                         )
-                        st.write(summary)
+                        st.session_state.summary_content = summary
+                        st.session_state.summary_generated = True
                     except Exception as e:
                         st.error(f"Error generating summary: {str(e)}")
+                    finally:
+                        st.session_state.generating_summary = False
+                        st.rerun()
+            
+            # Show summary if generated
+            if st.session_state.summary_generated and st.session_state.summary_content:
+                st.write(st.session_state.summary_content)
         
         with col2:
             st.header("💬 Ask Questions")
             
-            # Initialize chat history
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
-            
             # Chat input at the top
-            if question := st.chat_input("Ask a question about the document"):
+            question = st.chat_input("Ask a question about the document")
+            
+            if question:
                 # Generate response first
                 try:
                     # Search for relevant documents
@@ -134,16 +149,15 @@ def main():
                     # Add both messages to the beginning of the list
                     st.session_state.messages.insert(0, {"role": "assistant", "content": full_response})
                     st.session_state.messages.insert(0, {"role": "user", "content": question})
+                    st.rerun()
                     
                 except Exception as e:
                     st.error(f"Error generating response: {str(e)}")
             
             # Display chat history (newest first)
-            chat_container = st.container()
-            with chat_container:
-                for message in st.session_state.messages:
-                    with st.chat_message(message["role"]):
-                        st.write(message["content"])
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.write(message["content"])
 
 if __name__ == "__main__":
     main()
