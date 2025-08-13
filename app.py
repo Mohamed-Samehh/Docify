@@ -170,7 +170,7 @@ def main():
                     )
                     
                     # Generate response with spinner
-                    with st.spinner("🤖 Thinking..."):
+                    with st.spinner("Thinking..."):
                         full_response = ""
                         for chunk in st.session_state.chatbot.answer_question(question, relevant_docs):
                             full_response += chunk
