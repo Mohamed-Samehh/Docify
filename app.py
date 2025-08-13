@@ -19,8 +19,8 @@ def get_chatbot_service(api_key):
     return ChatbotService(api_key)
 
 @st.cache_data
-def process_document(_processor, file_content, file_name):
-    """Process document with content-based caching"""
+def process_document(_processor, file_content, file_name, _timestamp):
+    """Process document with content-based caching and timestamp for uniqueness"""
     import tempfile
     import os
     
@@ -39,7 +39,8 @@ def process_document(_processor, file_content, file_name):
         os.unlink(tmp_file_path)
 
 @st.cache_data
-def create_vectorstore(_processor, _chunks):
+def create_vectorstore(_processor, _chunks, _timestamp):
+    """Create vectorstore with timestamp for cache uniqueness"""
     return _processor.create_vectorstore(_chunks)
 
 def main():
@@ -68,8 +69,10 @@ def main():
         # Check if this is a different file than previously processed
         if ('current_file' in st.session_state and 
             st.session_state.current_file != uploaded_file.name):
-            # Clear previous session state for new file
-            keys_to_clear = ['chunks', 'vectorstore', 'messages', 'current_file']
+            # Clear previous session state and caches for new file
+            process_document.clear()
+            create_vectorstore.clear()
+            keys_to_clear = ['chunks', 'vectorstore', 'messages', 'current_file', 'summary_generated', 'summary_content']
             for key in keys_to_clear:
                 if key in st.session_state:
                     del st.session_state[key]
@@ -80,8 +83,12 @@ def main():
                 file_content = uploaded_file.getvalue()
                 file_name = uploaded_file.name
                 
-                chunks = process_document(doc_processor, file_content, file_name)
-                vectorstore = create_vectorstore(doc_processor, chunks)
+                # Add timestamp to ensure unique cache keys for each upload session
+                import time
+                timestamp = time.time()
+                
+                chunks = process_document(doc_processor, file_content, file_name, timestamp)
+                vectorstore = create_vectorstore(doc_processor, chunks, timestamp)
             
             # Store in session state
             st.session_state.chunks = chunks
@@ -89,10 +96,23 @@ def main():
             st.session_state.doc_processor = doc_processor
             st.session_state.chatbot = chatbot
             st.session_state.current_file = uploaded_file.name  # Track current file
+            st.session_state.file_timestamp = timestamp  # Track when file was processed
             
         except Exception as e:
             st.error(f"Error processing document: {str(e)}")
             return
+    else:
+        # File was removed - clear all related session state AND clear caches
+        if 'chunks' in st.session_state:
+            # Clear caches to prevent old data from persisting
+            process_document.clear()
+            create_vectorstore.clear()
+            
+            keys_to_clear = ['chunks', 'vectorstore', 'messages', 'current_file', 'summary_generated', 'summary_content', 'doc_processor', 'chatbot']
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
     
     # Only show functionality if document is processed
     if 'chunks' in st.session_state:
@@ -134,6 +154,11 @@ def main():
             question = st.chat_input("Ask a question about the document")
             
             if question:
+                # Check if we still have a valid document
+                if 'vectorstore' not in st.session_state or 'chunks' not in st.session_state:
+                    st.error("Please upload a document first.")
+                    return
+                    
                 # Generate response first
                 try:
                     # Search for relevant documents
