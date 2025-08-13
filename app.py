@@ -19,11 +19,26 @@ def get_chatbot_service(api_key):
     return ChatbotService(api_key)
 
 @st.cache_data
-def process_document(_processor, uploaded_file):
-    chunks = _processor.load_from_upload(uploaded_file)
-    return chunks
+def process_document(_processor, file_content, file_name):
+    """Process document with content-based caching"""
+    import tempfile
+    import os
+    
+    # Create a temporary file with the uploaded content
+    with tempfile.NamedTemporaryFile(
+        delete=False, 
+        suffix=f".{file_name.split('.')[-1]}"
+    ) as tmp_file:
+        tmp_file.write(file_content)
+        tmp_file_path = tmp_file.name
+    
+    try:
+        chunks = _processor.load_document(tmp_file_path)
+        return chunks
+    finally:
+        os.unlink(tmp_file_path)
 
-@st.cache_resource
+@st.cache_data
 def create_vectorstore(_processor, _chunks):
     return _processor.create_vectorstore(_chunks)
 
@@ -50,9 +65,22 @@ def main():
     )
     
     if uploaded_file:
+        # Check if this is a different file than previously processed
+        if ('current_file' in st.session_state and 
+            st.session_state.current_file != uploaded_file.name):
+            # Clear previous session state for new file
+            keys_to_clear = ['chunks', 'vectorstore', 'messages', 'current_file']
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
+        
         try:
             with st.spinner("Processing document..."):
-                chunks = process_document(doc_processor, uploaded_file)
+                # Get file content and name for better caching
+                file_content = uploaded_file.getvalue()
+                file_name = uploaded_file.name
+                
+                chunks = process_document(doc_processor, file_content, file_name)
                 vectorstore = create_vectorstore(doc_processor, chunks)
             
             st.success(f"✅ Processed {len(chunks)} chunks from {uploaded_file.name}")
@@ -62,6 +90,7 @@ def main():
             st.session_state.vectorstore = vectorstore
             st.session_state.doc_processor = doc_processor
             st.session_state.chatbot = chatbot
+            st.session_state.current_file = uploaded_file.name  # Track current file
             
         except Exception as e:
             st.error(f"Error processing document: {str(e)}")
@@ -69,6 +98,9 @@ def main():
     
     # Only show functionality if document is processed
     if 'chunks' in st.session_state:
+        # Display current file info
+        st.info(f"📄 Currently working with: **{st.session_state.current_file}**")
+        
         col1, col2 = st.columns([1, 1])
         
         with col1:
