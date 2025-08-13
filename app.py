@@ -159,27 +159,30 @@ def main():
                     st.error("Please upload a document first.")
                     return
                     
-                # Generate response first
+                # Generate response with loading indicator
                 try:
+                    # Add user message first
+                    st.session_state.messages.insert(0, {"role": "user", "content": question})
+                    
                     # Search for relevant documents
                     relevant_docs = st.session_state.doc_processor.search_documents(
                         st.session_state.vectorstore, question, k=3
                     )
                     
-                    # Get full response before adding to messages
-                    full_response = ""
-                    for chunk in st.session_state.chatbot.answer_question(question, relevant_docs):
-                        full_response += chunk
+                    # Generate response with spinner
+                    with st.spinner("🤖 Thinking..."):
+                        full_response = ""
+                        for chunk in st.session_state.chatbot.answer_question(question, relevant_docs):
+                            full_response += chunk
                     
-                    # Add both messages to the beginning of the list
-                    st.session_state.messages.insert(0, {"role": "assistant", "content": full_response})
-                    st.session_state.messages.insert(0, {"role": "user", "content": question})
+                    # Add assistant response right after user message (at position 1)
+                    st.session_state.messages.insert(1, {"role": "assistant", "content": full_response})
                     st.rerun()
                     
                 except Exception as e:
                     st.error(f"Error generating response: {str(e)}")
             
-            # Display chat history (newest first)
+            # Display chat history (newest conversation first, but user message above bot response)
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.write(message["content"])
