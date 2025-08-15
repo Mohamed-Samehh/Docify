@@ -157,12 +157,16 @@ def main():
                 st.subheader("Summary:")
                 st.write(st.session_state.summary_content)
                 
-                # Option to regenerate summary
-                if st.button("🔄 Regenerate Summary"):
-                    st.session_state.summary_generated = False
-                    st.session_state.summary_content = ""
-                    st.session_state.generating_summary = True
-                    st.rerun()
+                st.markdown("---")  # Add a subtle separator
+                
+                # Centered regenerate button with better styling
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col2:
+                    if st.button("🔄 Regenerate Summary", type="secondary", use_container_width=True):
+                        st.session_state.summary_generated = False
+                        st.session_state.summary_content = ""
+                        st.session_state.generating_summary = True
+                        st.rerun()
         
         with tab2:
             st.header("💬 Ask Questions")
