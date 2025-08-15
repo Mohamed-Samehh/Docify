@@ -38,7 +38,7 @@ def process_document(_processor, file_content, file_name, _timestamp):
     finally:
         os.unlink(tmp_file_path)
 
-@st.cache_data(show_spinner="Building searchable index...")
+@st.cache_data(show_spinner=None)
 def create_vectorstore(_processor, _chunks, _timestamp):
     """Create vectorstore with timestamp for cache uniqueness"""
     return _processor.create_vectorstore(_chunks)
@@ -124,12 +124,21 @@ def main():
         if "summary_content" not in st.session_state:
             st.session_state.summary_content = ""
             
-        col1, col2 = st.columns([1, 1])
+        # Create tabs for different functionalities
+        tab1, tab2 = st.tabs(["📋 Document Summary", "💬 Ask Questions"])
         
-        with col1:
-            st.header("📋 Summary")
-            if st.button("Generate Summary", type="primary", disabled=st.session_state.get('generating_summary', False)):
-                st.session_state.generating_summary = True
+        with tab1:
+            st.header("📋 Document Summary")
+            st.write("Generate a comprehensive summary of your uploaded document.")
+            
+            # Only show button if not currently generating and summary hasn't been generated yet
+            if not st.session_state.get('generating_summary', False) and not st.session_state.summary_generated:
+                if st.button("Generate Summary", type="primary"):
+                    st.session_state.generating_summary = True
+                    st.rerun()
+            
+            # Handle summary generation
+            if st.session_state.get('generating_summary', False):
                 with st.spinner("Analyzing document and creating summary..."):
                     try:
                         summary = st.session_state.chatbot.summarize_document(
@@ -145,10 +154,19 @@ def main():
             
             # Show summary if generated
             if st.session_state.summary_generated and st.session_state.summary_content:
+                st.subheader("Summary:")
                 st.write(st.session_state.summary_content)
+                
+                # Option to regenerate summary
+                if st.button("🔄 Regenerate Summary"):
+                    st.session_state.summary_generated = False
+                    st.session_state.summary_content = ""
+                    st.session_state.generating_summary = True
+                    st.rerun()
         
-        with col2:
+        with tab2:
             st.header("💬 Ask Questions")
+            st.write("Ask questions about your document and get AI-powered answers.")
             
             # Chat input at the top
             question = st.chat_input("Ask a question about the document")
