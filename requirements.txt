@@ -9,4 +9,3 @@ pypdf
 tiktoken
 torch
 python-dotenv
-reportlab

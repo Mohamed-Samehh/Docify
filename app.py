@@ -3,12 +3,6 @@ from document_processor import DocumentProcessor
 from chatbot_service import ChatbotService
 import os
 from dotenv import load_dotenv
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.units import inch
-import io
 
 # Load environment variables
 load_dotenv()
@@ -48,37 +42,6 @@ def process_document(_processor, file_content, file_name, _timestamp):
 def create_vectorstore(_processor, _chunks, _timestamp):
     """Create vectorstore with timestamp for cache uniqueness"""
     return _processor.create_vectorstore(_chunks)
-
-def generate_summary_pdf(summary_text, filename="summary.pdf"):
-    """Generate a PDF from the summary text"""
-    buffer = io.BytesIO()
-    
-    # Create PDF document
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
-    
-    # Add title
-    title = Paragraph("Document Summary", styles['Title'])
-    story.append(title)
-    story.append(Spacer(1, 0.5*inch))
-    
-    # Add summary content with proper text wrapping
-    summary_style = styles['Normal']
-    summary_style.spaceAfter = 12
-    
-    # Split text into paragraphs and add each as a separate Paragraph
-    paragraphs = summary_text.split('\n\n')
-    for para in paragraphs:
-        if para.strip():
-            p = Paragraph(para.strip(), summary_style)
-            story.append(p)
-            story.append(Spacer(1, 6))
-    
-    # Build PDF
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
 
 def main():
     st.title("📄 Docify (Document Chatbot)")
@@ -196,27 +159,14 @@ def main():
                 
                 st.markdown("---")  # Add a subtle separator
                 
-                # Centered buttons with better styling
+                # Centered regenerate button with better styling
                 col1, col2, col3 = st.columns([1, 1, 1])
                 with col2:
-                    # Create two columns for the buttons
-                    btn_col1, btn_col2 = st.columns(2)
-                    with btn_col1:
-                        if st.button("♻️ Regenerate", type="secondary", use_container_width=True):
-                            st.session_state.summary_generated = False
-                            st.session_state.summary_content = ""
-                            st.session_state.generating_summary = True
-                            st.rerun()
-                    with btn_col2:
-                        # Generate PDF and create download button
-                        pdf_buffer = generate_summary_pdf(st.session_state.summary_content)
-                        st.download_button(
-                            label="📄 Download as PDF",
-                            data=pdf_buffer,
-                            file_name="document_summary.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
+                    if st.button("♻️ Regenerate Summary", type="secondary", use_container_width=True):
+                        st.session_state.summary_generated = False
+                        st.session_state.summary_content = ""
+                        st.session_state.generating_summary = True
+                        st.rerun()
         
         with tab2:
             st.header("💬 Ask Questions")
