@@ -10,15 +10,15 @@ load_dotenv()
 # Page config
 st.set_page_config(page_title="Docify", page_icon="📄", layout="wide")
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Initializing document processor...")
 def get_document_processor():
     return DocumentProcessor()
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Setting up AI chatbot service...")
 def get_chatbot_service(api_key):
     return ChatbotService(api_key)
 
-@st.cache_data
+@st.cache_data(show_spinner="Analyzing document structure...")
 def process_document(_processor, file_content, file_name, _timestamp):
     """Process document with content-based caching and timestamp for uniqueness"""
     import tempfile
@@ -38,7 +38,7 @@ def process_document(_processor, file_content, file_name, _timestamp):
     finally:
         os.unlink(tmp_file_path)
 
-@st.cache_data
+@st.cache_data(show_spinner="Building searchable index...")
 def create_vectorstore(_processor, _chunks, _timestamp):
     """Create vectorstore with timestamp for cache uniqueness"""
     return _processor.create_vectorstore(_chunks)
@@ -78,7 +78,7 @@ def main():
                     del st.session_state[key]
         
         try:
-            with st.spinner("Processing document..."):
+            with st.spinner("Processing your document - this may take a moment..."):
                 # Get file content and name for better caching
                 file_content = uploaded_file.getvalue()
                 file_name = uploaded_file.name
@@ -130,7 +130,7 @@ def main():
             st.header("📋 Summary")
             if st.button("Generate Summary", type="primary", disabled=st.session_state.get('generating_summary', False)):
                 st.session_state.generating_summary = True
-                with st.spinner("Generating summary..."):
+                with st.spinner("Analyzing document and creating summary..."):
                     try:
                         summary = st.session_state.chatbot.summarize_document(
                             st.session_state.chunks
