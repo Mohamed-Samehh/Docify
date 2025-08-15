@@ -9,3 +9,4 @@ pypdf
 tiktoken
 torch
 python-dotenv
+python-docx

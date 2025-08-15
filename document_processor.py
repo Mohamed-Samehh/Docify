@@ -6,6 +6,7 @@ import tempfile
 import os
 from typing import List, Optional
 from langchain.schema import Document
+from docx import Document as DocxDocument
 
 class DocumentProcessor:
     def __init__(self):
@@ -21,11 +22,33 @@ class DocumentProcessor:
         """Load document from file path"""
         if file_path.endswith('.pdf'):
             loader = PyPDFLoader(file_path)
+        elif file_path.endswith('.docx') or file_path.endswith('.doc'):
+            return self._load_docx_document(file_path)
         else:
             loader = TextLoader(file_path, encoding='utf-8')
         
         documents = loader.load()
         return self.text_splitter.split_documents(documents)
+    
+    def _load_docx_document(self, file_path: str) -> List[Document]:
+        """Load Word document and extract text"""
+        doc = DocxDocument(file_path)
+        text = ""
+        
+        # Extract text from paragraphs
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        
+        # Extract text from tables
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    text += cell.text + " "
+                text += "\n"
+        
+        # Create a Document object
+        document = Document(page_content=text, metadata={"source": file_path})
+        return self.text_splitter.split_documents([document])
     
     def load_from_upload(self, uploaded_file) -> List[Document]:
         """Load document from uploaded file"""

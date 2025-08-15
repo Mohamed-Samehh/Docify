@@ -61,8 +61,8 @@ def main():
     # File upload
     uploaded_file = st.file_uploader(
         "Choose a file", 
-        type=['pdf', 'txt'],
-        help="Upload a PDF or text file"
+        type=['pdf', 'txt', 'docx', 'doc'],
+        help="Upload a PDF, Word document, or text file"
     )
     
     if uploaded_file:
