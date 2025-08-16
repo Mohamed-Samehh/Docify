@@ -44,8 +44,8 @@ def create_vectorstore(_processor, _chunks, _timestamp):
     return _processor.create_vectorstore(_chunks)
 
 def main():
-    st.title("📄 Docify (Document Chatbot)")
-    st.write("Upload a document to get summaries and ask questions!")
+    st.title("📄 Docify (Document & Image Chatbot)")
+    st.write("Upload a document or image to get summaries and ask questions!")
     
     # Get API key from environment
     api_key = os.getenv("GROQ_API_KEY")
@@ -61,8 +61,8 @@ def main():
     # File upload
     uploaded_file = st.file_uploader(
         "Choose a file", 
-        type=['pdf', 'txt', 'docx', 'doc'],
-        help="Upload a PDF, Word document, or text file"
+        type=['pdf', 'txt', 'docx', 'doc', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff'],
+        help="Upload a PDF, Word document, text file, or image"
     )
     
     if uploaded_file:
@@ -125,11 +125,11 @@ def main():
             st.session_state.summary_content = ""
             
         # Create tabs for different functionalities
-        tab1, tab2 = st.tabs(["📋 Document Summary", "💬 Ask Questions"])
+        tab1, tab2 = st.tabs(["📋 Content Summary", "💬 Ask Questions"])
         
         with tab1:
-            st.header("📋 Document Summary")
-            st.write("Generate a comprehensive summary of your uploaded document.")
+            st.header("📋 Content Summary")
+            st.write("Generate a comprehensive summary of your uploaded document or image.")
             
             # Only show button if not currently generating and summary hasn't been generated yet
             if not st.session_state.get('generating_summary', False) and not st.session_state.summary_generated:
@@ -170,10 +170,10 @@ def main():
         
         with tab2:
             st.header("💬 Ask Questions")
-            st.write("Ask questions about your document and get AI-powered answers.")
+            st.write("Ask questions about your document or image and get AI-powered answers.")
             
             # Chat input at the top
-            question = st.chat_input("Ask a question about the document")
+            question = st.chat_input("Ask a question about the document or image")
             
             # Display chat history with thinking indicator in the right position
             for i, message in enumerate(st.session_state.messages):
@@ -210,9 +210,9 @@ def main():
                                 st.rerun()
             
             if question:
-                # Check if we still have a valid document
+                # Check if we still have a valid document or image
                 if 'vectorstore' not in st.session_state or 'chunks' not in st.session_state:
-                    st.error("Please upload a document first.")
+                    st.error("Please upload a document or image first.")
                     return
                 
                 # Prevent multiple concurrent requests

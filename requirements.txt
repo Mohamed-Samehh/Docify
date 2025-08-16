@@ -10,3 +10,4 @@ tiktoken
 torch
 python-dotenv
 python-docx
+pillow
